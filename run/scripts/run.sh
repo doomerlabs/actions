@@ -21,6 +21,8 @@ include_summary="${INPUT_INCLUDE_SUMMARY:-true}"
 resolve_addressed_comments="${INPUT_RESOLVE_ADDRESSED_COMMENTS:-true}"
 comment_tone="${INPUT_COMMENT_TONE:-}"
 comment_conciseness="${INPUT_COMMENT_CONCISENESS:-}"
+comment_politeness="${INPUT_COMMENT_POLITENESS:-}"
+comment_formality="${INPUT_COMMENT_FORMALITY:-}"
 builder="${INPUT_BUILDER:-local}"
 build="${INPUT_BUILD:-false}"
 force="${INPUT_FORCE:-false}"
@@ -116,8 +118,16 @@ case "$comment_conciseness" in
   ""|terse|standard|explanatory) ;;
   *) echo "comment-conciseness must be terse, standard, or explanatory" >&2; exit 2 ;;
 esac
-if [[ "$github_review_enabled" != true && ( -n "$comment_tone" || -n "$comment_conciseness" ) ]]; then
-  echo "comment-tone and comment-conciseness require github-review" >&2
+case "$comment_politeness" in
+  ""|low|medium|high) ;;
+  *) echo "comment-politeness must be low, medium, or high" >&2; exit 2 ;;
+esac
+case "$comment_formality" in
+  ""|low|medium|high) ;;
+  *) echo "comment-formality must be low, medium, or high" >&2; exit 2 ;;
+esac
+if [[ "$github_review_enabled" != true && ( -n "$comment_tone" || -n "$comment_conciseness" || -n "$comment_politeness" || -n "$comment_formality" ) ]]; then
+  echo "comment voice controls require github-review" >&2
   exit 2
 fi
 
@@ -348,6 +358,8 @@ if [[ "$github_review_enabled" == true ]]; then
   run_args+=(--github-review)
   if [[ -n "$comment_tone" ]]; then run_args+=(--github-comment-tone "$comment_tone"); fi
   if [[ -n "$comment_conciseness" ]]; then run_args+=(--github-comment-conciseness "$comment_conciseness"); fi
+  if [[ -n "$comment_politeness" ]]; then run_args+=(--github-comment-politeness "$comment_politeness"); fi
+  if [[ -n "$comment_formality" ]]; then run_args+=(--github-comment-formality "$comment_formality"); fi
   if [[ "$github_submit" == true ]]; then run_args+=(--github-submit); fi
   if [[ "$include_summary" == false ]]; then run_args+=(--github-include-summary=false); fi
   if [[ "$resolve_addressed_comments" == false ]]; then run_args+=(--github-resolve-addressed=false); fi
