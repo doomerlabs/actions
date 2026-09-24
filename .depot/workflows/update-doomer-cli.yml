@@ -1,0 +1,60 @@
+name: Update default Doomer CLI
+
+on:
+  schedule:
+    - cron: '29 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-default-doomer-cli
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: depot-ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Find published Doomer release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api 'repos/doomerlabs/doomer/releases?per_page=100' > "$RUNNER_TEMP/doomer-releases.json"
+          tag="$(python3 scripts/update-doomer-cli.py latest "$RUNNER_TEMP/doomer-releases.json")"
+          gh release view "$tag" --repo doomerlabs/doomer --json assets \
+            --jq '.assets[].name' | grep -Fxq checksums.txt
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Update action defaults and documentation
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          python3 scripts/update-doomer-cli.py update "$TAG"
+          git diff --check
+          if ! git diff --quiet; then
+            bash test/test.sh
+            INPUT_CLI_VERSION="$TAG" bash run/scripts/install.sh
+          fi
+      - name: Propose update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          if git diff --quiet; then exit 0; fi
+          branch="chore/doomer-cli-${TAG//./-}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$branch"
+          git add run/action.yml push/action.yml README.md test/test.sh test/run.sh
+          git commit -m "Update default Doomer CLI to $TAG"
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$branch"
+          if ! gh pr view "$branch" --json url >/dev/null 2>&1; then
+            gh pr create --base main --head "$branch" --title "Update default Doomer CLI to $TAG" \
+              --body "Updates the pinned CLI default in both actions to published release $TAG. Merge this PR, then publish the next actions tag to move v1."
+          fi
