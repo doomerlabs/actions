@@ -262,6 +262,8 @@ Pull-request scope is inferred from the CI environment. Use `base` and `head` to
 
 On `pull_request` and `pull_request_target` events, `github-review: auto` posts findings through GitHub's GraphQL review API and `github-submit: true` submits the review as an informational comment. Grant `pull-requests: write`; the action uses `github.token` unless `github-token` is supplied. After a complete successful rerun, the action resolves prior threads from the same GitHub identity when their findings are no longer reported by an adversary that ran again. Set `resolve-addressed-comments: false` to leave those threads open. Partial or failed reviews never resolve comments. The default summary covers actual findings only and uses the configured model provider for one cross-adversary synthesis; clean adversaries add nothing, and a clean run posts no review. Set `include-summary: false` to omit that persistent summary while retaining inline findings and findings that cannot be placed on the diff. Set `github-review: false` to keep results in the job log only.
 
+For CLI releases that support comment voice controls, set `comment-tone` to `direct`, `neutral`, or `coaching`, `comment-conciseness` to `terse`, `standard`, or `explanatory`, and `comment-politeness` and `comment-formality` independently to `low`, `medium`, or `high`. Politeness also accepts `very-low` for sharp, evidence-backed criticism of the PR, never its author. Low formality permits occasional mild swearing, never abuse. Omit inputs to use the installed CLI's defaults. These inputs apply when `github-review` is enabled. Pin `cli-version` to a release containing all requested controls.
+
 ### Authentication
 
 Default `auth-mode: none` skips login so public and local adversaries work without a token. For private pulls, prefer `auth-mode: oidc`, add `permissions: id-token: write`, trust the GitHub or Depot repository identity on the team page, and set `registry-namespace`. The exchanged pull credential lasts ten minutes and the action removes its unique temporary profile afterward.
@@ -303,6 +305,10 @@ The entire review command has a 10-minute wall-clock deadline, including registr
 | `github-submit` | no | `true` | Submit the GitHub review as an informational comment instead of leaving it pending. |
 | `include-summary` | no | `true` | Include the aggregate assessment/opinion in the review body; findings are still posted when false. |
 | `resolve-addressed-comments` | no | `true` | Resolve prior Adversary threads whose findings disappear after a complete successful rerun. |
+| `comment-tone` | no | CLI default | `direct`, `neutral`, or `coaching`; requires a CLI release with comment voice controls. |
+| `comment-conciseness` | no | CLI default | `terse`, `standard`, or `explanatory`; requires a CLI release with comment voice controls. |
+| `comment-politeness` | no | CLI default | `very-low`, `low`, `medium`, or `high`; controls bluntness without personal attacks. |
+| `comment-formality` | no | CLI default | `low`, `medium`, or `high`; low allows occasional mild swearing. |
 | `github-token` | no | `github.token` | Token used to post the GitHub review. |
 | `builder` | no | `local` | `local` or `docker` builder for local adversaries. |
 | `build` | no | `false` | Build a local adversary before running. |

@@ -48,6 +48,10 @@ grep -Fq 'default: "true"' <<<"$include_summary_input"
 resolve_addressed_input="$(sed -n '/^  resolve-addressed-comments:/,/^  github-token:/p' "$root/run/action.yml")"
 grep -Fq 'default: "true"' <<<"$resolve_addressed_input"
 grep -Fq 'INPUT_RESOLVE_ADDRESSED_COMMENTS: ${{ inputs.resolve-addressed-comments }}' "$root/run/action.yml"
+grep -Fq 'INPUT_COMMENT_TONE: ${{ inputs.comment-tone }}' "$root/run/action.yml"
+grep -Fq 'INPUT_COMMENT_CONCISENESS: ${{ inputs.comment-conciseness }}' "$root/run/action.yml"
+grep -Fq 'INPUT_COMMENT_POLITENESS: ${{ inputs.comment-politeness }}' "$root/run/action.yml"
+grep -Fq 'INPUT_COMMENT_FORMALITY: ${{ inputs.comment-formality }}' "$root/run/action.yml"
 fail_on_findings_input="$(sed -n '/^  fail-on-findings:/,/^  api-url:/p' "$root/run/action.yml")"
 grep -Fq 'default: "false"' <<<"$fail_on_findings_input"
 path_input="$(sed -n '/^  path:/,/^  base:/p' "$root/run/action.yml")"
@@ -265,6 +269,34 @@ PATH="$fake_bin:$PATH" FAKE_LOG="$pr_no_resolve_log" RUNNER_TEMP="$runner" GITHU
   INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none INPUT_RESOLVE_ADDRESSED_COMMENTS=false \
   bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null
 grep -Fq 'args=--path . --format text --github-review --github-submit --github-resolve-addressed=false' "$pr_no_resolve_log"
+pr_voice_log="$tmp/pr-voice.log"
+: >"$pr_voice_log"
+PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/pr-voice-output" \
+  GITHUB_EVENT_NAME=pull_request INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none \
+  INPUT_COMMENT_TONE=coaching INPUT_COMMENT_CONCISENESS=standard INPUT_COMMENT_POLITENESS=very-low INPUT_COMMENT_FORMALITY=medium \
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null
+grep -Fq -- '--github-comment-tone coaching --github-comment-conciseness standard --github-comment-politeness very-low --github-comment-formality medium' "$pr_voice_log"
+if PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/pr-voice-invalid-output" \
+  GITHUB_EVENT_NAME=pull_request INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none \
+  INPUT_COMMENT_TONE=hostile \
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null 2>&1; then
+  echo "run accepted an invalid comment tone" >&2
+  exit 1
+fi
+if PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/pr-voice-invalid-manner-output" \
+  GITHUB_EVENT_NAME=pull_request INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none \
+  INPUT_COMMENT_FORMALITY=profane \
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null 2>&1; then
+  echo "run accepted an invalid comment formality" >&2
+  exit 1
+fi
+if PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/pr-voice-no-review-output" \
+  INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none INPUT_GITHUB_REVIEW=false \
+  INPUT_COMMENT_TONE=neutral \
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null 2>&1; then
+  echo "run accepted comment voice without a GitHub review" >&2
+  exit 1
+fi
 if grep -Fq 'github-do-not-print' "$pr_log" "$pr_output"; then
   echo "GitHub token leaked into run action output" >&2
   exit 1

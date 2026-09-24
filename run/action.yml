@@ -43,6 +43,18 @@ inputs:
     description: Resolve prior Adversary review threads when a successful rerun no longer reports their findings (true or false).
     required: false
     default: "true"
+  comment-tone:
+    description: PR comment voice for supported CLI versions (direct, neutral, or coaching). Empty uses the CLI default.
+    required: false
+  comment-conciseness:
+    description: PR comment length for supported CLI versions (terse, standard, or explanatory). Empty uses the CLI default.
+    required: false
+  comment-politeness:
+    description: PR comment politeness for supported CLI versions (very-low, low, medium, or high). Empty uses the CLI default.
+    required: false
+  comment-formality:
+    description: PR comment formality for supported CLI versions (low, medium, or high). Empty uses the CLI default.
+    required: false
   github-token:
     description: GitHub token used to post the pull-request review. Defaults to github.token.
     required: false
@@ -195,6 +207,10 @@ runs:
         INPUT_GITHUB_SUBMIT: ${{ inputs.github-submit }}
         INPUT_INCLUDE_SUMMARY: ${{ inputs.include-summary }}
         INPUT_RESOLVE_ADDRESSED_COMMENTS: ${{ inputs.resolve-addressed-comments }}
+        INPUT_COMMENT_TONE: ${{ inputs.comment-tone }}
+        INPUT_COMMENT_CONCISENESS: ${{ inputs.comment-conciseness }}
+        INPUT_COMMENT_POLITENESS: ${{ inputs.comment-politeness }}
+        INPUT_COMMENT_FORMALITY: ${{ inputs.comment-formality }}
         INPUT_BUILDER: ${{ inputs.builder }}
         INPUT_BUILD: ${{ inputs.build }}
         INPUT_FORCE: ${{ inputs.force }}
