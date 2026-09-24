@@ -281,6 +281,13 @@ if PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_
   echo "run accepted an invalid comment tone" >&2
   exit 1
 fi
+if PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/pr-voice-no-review-output" \
+  INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none INPUT_GITHUB_REVIEW=false \
+  INPUT_COMMENT_TONE=neutral \
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null 2>&1; then
+  echo "run accepted comment voice without a GitHub review" >&2
+  exit 1
+fi
 if grep -Fq 'github-do-not-print' "$pr_log" "$pr_output"; then
   echo "GitHub token leaked into run action output" >&2
   exit 1
