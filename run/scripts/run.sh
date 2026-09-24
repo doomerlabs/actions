@@ -119,8 +119,8 @@ case "$comment_conciseness" in
   *) echo "comment-conciseness must be terse, standard, or explanatory" >&2; exit 2 ;;
 esac
 case "$comment_politeness" in
-  ""|low|medium|high) ;;
-  *) echo "comment-politeness must be low, medium, or high" >&2; exit 2 ;;
+  ""|very-low|low|medium|high) ;;
+  *) echo "comment-politeness must be very-low, low, medium, or high" >&2; exit 2 ;;
 esac
 case "$comment_formality" in
   ""|low|medium|high) ;;

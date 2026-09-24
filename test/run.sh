@@ -273,9 +273,9 @@ pr_voice_log="$tmp/pr-voice.log"
 : >"$pr_voice_log"
 PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/pr-voice-output" \
   GITHUB_EVENT_NAME=pull_request INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none \
-  INPUT_COMMENT_TONE=coaching INPUT_COMMENT_CONCISENESS=standard INPUT_COMMENT_POLITENESS=low INPUT_COMMENT_FORMALITY=medium \
+  INPUT_COMMENT_TONE=coaching INPUT_COMMENT_CONCISENESS=standard INPUT_COMMENT_POLITENESS=very-low INPUT_COMMENT_FORMALITY=medium \
   bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null
-grep -Fq -- '--github-comment-tone coaching --github-comment-conciseness standard --github-comment-politeness low --github-comment-formality medium' "$pr_voice_log"
+grep -Fq -- '--github-comment-tone coaching --github-comment-conciseness standard --github-comment-politeness very-low --github-comment-formality medium' "$pr_voice_log"
 if PATH="$fake_bin:$PATH" FAKE_LOG="$pr_voice_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/pr-voice-invalid-output" \
   GITHUB_EVENT_NAME=pull_request INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none \
   INPUT_COMMENT_TONE=hostile \

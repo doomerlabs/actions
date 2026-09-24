@@ -50,7 +50,7 @@ inputs:
     description: PR comment length for supported CLI versions (terse, standard, or explanatory). Empty uses the CLI default.
     required: false
   comment-politeness:
-    description: PR comment politeness for supported CLI versions (low, medium, or high). Empty uses the CLI default.
+    description: PR comment politeness for supported CLI versions (very-low, low, medium, or high). Empty uses the CLI default.
     required: false
   comment-formality:
     description: PR comment formality for supported CLI versions (low, medium, or high). Empty uses the CLI default.
