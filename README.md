@@ -371,6 +371,11 @@ the moving major tag (`v1` for a `v1.x.x` release), then publishes the GitHub
 release. A failed major-tag update prevents release publication. Merging to
 `main` alone does not release the actions.
 
+The hourly `update-doomer-cli` workflow proposes a PR when a newer published
+Doomer CLI release is available. It updates both action defaults, examples, and
+tests together. After merging that PR, tag the next action release to publish
+the new default through `v1`; no version strings need manual editing.
+
 To retry publication for an existing tag, dispatch `update-major-tag.yml` with
 the `tag` input. Reruns preserve existing releases; older tags cannot move the
 major tag backwards.
