@@ -1,0 +1,19 @@
+test/run.sh
+  s_9037261233afcf::t_3c99cbdbbc0f7a 232-234,236-238,241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "466f4bd5d67c516c0920fe2fde647eeefe8f334f",
+  "prompts": {},
+  "sessions": {
+    "s_9037261233afcf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e27c-79b8-7fe2-9ffe-a6c048acc8f7",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Marc Campbell <marc.e.campbell@gmail.com>"
+    }
+  }
+}
