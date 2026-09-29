@@ -302,6 +302,7 @@ The entire review command has a 10-minute wall-clock deadline, including registr
 | `head` | no | — | Git head ref for change detection. |
 | `all-files` | no | `false` | Opt into a full-repository scan instead of the inferred PR or branch diff. |
 | `github-review` | no | `auto` | `auto`, `true`, or `false`; auto posts on pull-request events. |
+| `review-tracks` | no | `both` | `both`, `standard`, or `adversarial`; the latter two require a CLI release with intent routing. |
 | `github-submit` | no | `true` | Submit the GitHub review as an informational comment instead of leaving it pending. |
 | `include-summary` | no | `true` | Include the aggregate assessment/opinion in the review body; findings are still posted when false. |
 | `resolve-addressed-comments` | no | `true` | Resolve prior Adversary threads whose findings disappear after a complete successful rerun. |
