@@ -229,12 +229,16 @@ PATH="$fake_bin:$PATH" FAKE_LOG="$tracks_log" RUNNER_TEMP="$runner" GITHUB_OUTPU
   INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none INPUT_REVIEW_TRACKS=standard \
   bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null
 grep -Fq -- '--review-tracks standard' "$tracks_log"
-if PATH="$fake_bin:$PATH" FAKE_LOG="$tracks_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/tracks-invalid-output" \
+tracks_invalid_log="$tmp/tracks-invalid.log"
+tracks_invalid_status=0
+PATH="$fake_bin:$PATH" FAKE_LOG="$tracks_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/tracks-invalid-output" \
   INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none INPUT_REVIEW_TRACKS=unknown \
-  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null 2>&1; then
-  echo "invalid review track was accepted" >&2
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >"$tracks_invalid_log" 2>&1 || tracks_invalid_status=$?
+if [[ "$tracks_invalid_status" -ne 2 ]]; then
+  echo "invalid review track exited $tracks_invalid_status instead of 2" >&2
   exit 1
 fi
+grep -Fq 'review-tracks must be both, standard, or adversarial' "$tracks_invalid_log"
 
 custom_data_dir="$tmp/custom-adversary-data"
 custom_data_log="$tmp/custom-data.log"
