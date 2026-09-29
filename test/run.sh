@@ -52,6 +52,7 @@ grep -Fq 'INPUT_COMMENT_TONE: ${{ inputs.comment-tone }}' "$root/run/action.yml"
 grep -Fq 'INPUT_COMMENT_CONCISENESS: ${{ inputs.comment-conciseness }}' "$root/run/action.yml"
 grep -Fq 'INPUT_COMMENT_POLITENESS: ${{ inputs.comment-politeness }}' "$root/run/action.yml"
 grep -Fq 'INPUT_COMMENT_FORMALITY: ${{ inputs.comment-formality }}' "$root/run/action.yml"
+grep -Fq 'INPUT_REVIEW_TRACKS: ${{ inputs.review-tracks }}' "$root/run/action.yml"
 fail_on_findings_input="$(sed -n '/^  fail-on-findings:/,/^  api-url:/p' "$root/run/action.yml")"
 grep -Fq 'default: "false"' <<<"$fail_on_findings_input"
 path_input="$(sed -n '/^  path:/,/^  base:/p' "$root/run/action.yml")"
@@ -221,6 +222,23 @@ if grep -Fq -- '--builder' "$auto_log"; then
   echo "automatic selection passed an explicit-only builder flag" >&2
   exit 1
 fi
+
+tracks_log="$tmp/tracks.log"
+: >"$tracks_log"
+PATH="$fake_bin:$PATH" FAKE_LOG="$tracks_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/tracks-output" \
+  INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none INPUT_REVIEW_TRACKS=standard \
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >/dev/null
+grep -Fq -- '--review-tracks standard' "$tracks_log"
+tracks_invalid_log="$tmp/tracks-invalid.log"
+tracks_invalid_status=0
+PATH="$fake_bin:$PATH" FAKE_LOG="$tracks_log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$tmp/tracks-invalid-output" \
+  INPUT_ADVERSARIES=auto INPUT_PATH=. INPUT_AUTH_MODE=none INPUT_REVIEW_TRACKS=unknown \
+  bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/run/scripts/run.sh" >"$tracks_invalid_log" 2>&1 || tracks_invalid_status=$?
+if [[ "$tracks_invalid_status" -ne 2 ]]; then
+  echo "invalid review track exited $tracks_invalid_status instead of 2" >&2
+  exit 1
+fi
+grep -Fq 'review-tracks must be both, standard, or adversarial' "$tracks_invalid_log"
 
 custom_data_dir="$tmp/custom-adversary-data"
 custom_data_log="$tmp/custom-data.log"

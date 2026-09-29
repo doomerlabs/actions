@@ -10,6 +10,7 @@ require_bool() {
 }
 
 adversaries_raw="${INPUT_ADVERSARIES:-auto}"
+review_tracks="${INPUT_REVIEW_TRACKS:-both}"
 path="${INPUT_PATH:-.}"
 data_dir="${INPUT_DATA_DIR:-${ADVERSARY_DATA_DIR:-}}"
 base="${INPUT_BASE:-}"
@@ -99,6 +100,11 @@ require_bool include-suppressed "$include_suppressed"
 require_bool shell "$shell_mode"
 require_bool allow-unsafe-host-execution "$allow_unsafe_host_execution"
 require_bool fail-on-findings "$fail_on_findings"
+
+case "$review_tracks" in
+  both|standard|adversarial) ;;
+  *) echo "review-tracks must be both, standard, or adversarial" >&2; exit 2 ;;
+esac
 
 case "$github_review" in
   auto)
@@ -335,6 +341,7 @@ elif [[ "$auth_mode" == oauth ]]; then
 fi
 
 run_args=(run)
+if [[ "$review_tracks" != both ]]; then run_args+=(--review-tracks "$review_tracks"); fi
 if [[ "$auto_select" == false ]]; then run_args+=("${adversaries[@]}"); fi
 run_args+=(--path "$path")
 if [[ "$auto_select" == false ]]; then run_args+=(--builder "$builder"); fi

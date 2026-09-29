@@ -6,6 +6,10 @@ inputs:
     description: Use auto to pull accessible adversaries and select those matching the change, or provide one or more references separated by whitespace or newlines.
     required: false
     default: auto
+  review-tracks:
+    description: Run both standard and risk-routed adversarial reviews, or choose one track. Requires a CLI release with intent routing.
+    required: false
+    default: both
   cli-version:
     description: Exact Doomer CLI release tag to install.
     required: false
@@ -198,6 +202,7 @@ runs:
       shell: bash
       env:
         INPUT_ADVERSARIES: ${{ inputs.adversaries }}
+        INPUT_REVIEW_TRACKS: ${{ inputs.review-tracks }}
         INPUT_PATH: ${{ inputs.path }}
         INPUT_DATA_DIR: ${{ inputs.data-dir }}
         INPUT_BASE: ${{ inputs.base }}
