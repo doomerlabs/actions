@@ -13,7 +13,7 @@ inputs:
   cli-version:
     description: Exact Doomer CLI release tag to install.
     required: false
-    default: 2026.9.28-beta.1
+    default: 2026.9.30-beta.1
   path:
     description: Path to the source directory to review, relative to the workspace.
     required: false
