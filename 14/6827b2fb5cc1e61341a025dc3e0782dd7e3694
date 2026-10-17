@@ -1,0 +1,37 @@
+.depot/workflows/update-major-tag.yml
+  s_1fd5568067f21a::t_119fb57682b7ef 35-39
+README.md
+  s_1fd5568067f21a::t_e29e746809df6d 3,9-10,170-232
+review/action.yml
+  s_1fd5568067f21a::t_d25a4dd6b64eb1 1-73
+review/scripts/install.sh
+  s_1fd5568067f21a::t_2dd815be2f9917 1-94
+review/scripts/review.sh
+  s_1fd5568067f21a::t_b0a7a2d193e6ca 1-98
+review/scripts/timeout.py
+  s_1fd5568067f21a::t_ceae9bc68da9f2 1-73
+run/action.yml
+  s_1fd5568067f21a::t_86dd947841a903 1-2
+test/install-defaults.sh
+  s_1fd5568067f21a::t_131796a546f819 11
+test/review.sh
+  s_1fd5568067f21a::t_a1203bb7012c3e 1-83
+test/test.sh
+  s_1fd5568067f21a::t_cfe3298f8606a6 321
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "146827b2fb5cc1e61341a025dc3e0782dd7e3694",
+  "prompts": {},
+  "sessions": {
+    "s_1fd5568067f21a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14c25-c11e-7741-9fcc-f0b2322650bc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marc Campbell <marc.e.campbell@gmail.com>"
+    }
+  }
+}
