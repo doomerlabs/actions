@@ -1,0 +1,31 @@
+.depot/workflows/update-major-tag.yml
+  s_1fd5568067f21a::t_ffad258e5111ff 35
+README.md
+  s_1fd5568067f21a::t_d7408b70c4e269 227,231-235
+review/action.yml
+  s_1fd5568067f21a::t_659450334e62f2 55
+review/scripts/install.sh
+  s_1fd5568067f21a::t_a8bf2d5c6020c3 4-21,23,28-33,39-40,42,74,84-85,91-92
+test/install-defaults.sh
+  s_1fd5568067f21a::t_c0670bbdf8a6d0 11
+test/install_auth.py
+  s_1fd5568067f21a::t_bf1290694f717a 21
+test/timeout.py
+  s_1fd5568067f21a::t_3fbd667ff65916 12,84-85,98-99,119,122,133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3237364f4181a1cd4a2ad979b1871e8b32b7a278",
+  "prompts": {},
+  "sessions": {
+    "s_1fd5568067f21a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14c25-c11e-7741-9fcc-f0b2322650bc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marc Campbell <marc.e.campbell@gmail.com>"
+    }
+  }
+}
