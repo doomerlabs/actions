@@ -9,7 +9,7 @@ import time
 import unittest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "run/scripts/timeout.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "review/scripts/timeout.py"
 spec = importlib.util.spec_from_file_location("review_timeout", SCRIPT)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
@@ -81,8 +81,8 @@ class TimeoutTest(unittest.TestCase):
                     process.kill()
                     process.wait()
 
-    def test_action_shell_cancellation_waits_for_review_before_logout(self):
-        for sig, output_format in [(signal.SIGTERM, "text"), (signal.SIGINT, "json")]:
+    def test_action_shell_cancellation_stops_review_and_removes_credentials(self):
+        for sig in [signal.SIGTERM, signal.SIGINT]:
             with self.subTest(signal=sig), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 fake = root / "doomer"
@@ -95,7 +95,8 @@ if args[0] == "--profile":
     args = args[2:]
 if args[0] == "login":
     sys.stdin.read()
-elif args[0] == "run":
+    (root / "config-path").write_text(os.environ["DOOMER_CONFIG_DIR"])
+elif args[0] == "review":
     child = subprocess.Popen([sys.executable, "-c", """
 import os, signal, time
 from pathlib import Path
@@ -107,11 +108,6 @@ time.sleep(60)
         time.sleep(0.01)
     (root / "ready").write_text(f"{os.getpid()} {os.getppid()}")
     time.sleep(60)
-elif args[0] == "logout":
-    pid = (root / "child").read_text()
-    state = subprocess.run(["ps", "-o", "stat=", "-p", pid],
-                           capture_output=True, text=True).stdout.strip()
-    (root / "logout").write_text(state)
 ''')
                 fake.chmod(0o755)
                 env = {key: value for key, value in os.environ.items()
@@ -120,13 +116,10 @@ elif args[0] == "logout":
                     PATH=f"{root}:{os.environ['PATH']}", TEST_ROOT=str(root),
                     RUNNER_TEMP=str(root), GITHUB_OUTPUT=str(root / "outputs"),
                     INPUT_AUTH_MODE="token", INPUT_TOKEN="adv_sa_test",
-                    INPUT_FORMAT=output_format,
-                    ADVERSARY_MODEL_PROVIDER="openai",
-                    ADVERSARY_MODEL="test-review-model",
-                    OPENAI_API_KEY="test-review-key",
+                    INPUT_PROJECT="test-project", INPUT_PATH=str(root),
                 )
                 process = subprocess.Popen(
-                    ["bash", str(SCRIPT.parent / "run.sh")], env=env,
+                    ["bash", str(SCRIPT.parent / "review.sh")], env=env,
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                 )
                 try:
@@ -137,9 +130,7 @@ elif args[0] == "logout":
                     process.send_signal(sig)
                     stdout, stderr = process.communicate(timeout=10)
                     self.assertEqual(process.returncode, 128 + sig, stderr)
-                    state_at_logout = (root / "logout").read_text()
-                    self.assertTrue(not state_at_logout or state_at_logout.startswith("Z"),
-                                    f"review child still running at logout: {state_at_logout}")
+                    self.assertFalse(Path((root / "config-path").read_text()).exists())
                     for pid in (root / "ready").read_text().split():
                         state = subprocess.run(["ps", "-o", "stat=", "-p", pid],
                                                capture_output=True, text=True).stdout.strip()

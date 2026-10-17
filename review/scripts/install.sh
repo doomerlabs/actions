@@ -1,20 +1,45 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+is_expected_github_url() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+from urllib.parse import urlsplit
+
+try:
+    source, expected = (urlsplit(value) for value in sys.argv[1:])
+except ValueError:
+    raise SystemExit(1)
+trusted = (
+    source.scheme == "https"
+    and source.netloc in {"api.github.com", "github.com"}
+    and source == expected
+)
+raise SystemExit(0 if trusted else 1)
+PY
+}
+
 download() {
-  local source="$1" output="$2"
+  local source="$1" output="$2" authenticated_source="$3"
   local args=(--fail --silent --show-error --location --retry 3 --retry-all-errors)
   if [[ "$source" == https://* ]]; then
     args+=(--proto '=https' --proto-redir '=https')
+  fi
+  # Only the canonical release endpoint and requested assets receive a token.
+  # Configurable mirrors and other GitHub paths remain unauthenticated.
+  local token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  if [[ -n "$token" ]] && is_expected_github_url "$source" "$authenticated_source"; then
+    args+=(--header "Authorization: Bearer ${token}")
   fi
   curl "${args[@]}" "$source" --output "$output"
 }
 
 version="${INPUT_CLI_VERSION:-}"
 if [[ -z "$version" ]]; then
-  latest_api="${ADVERSARY_LATEST_RELEASE_API:-https://api.github.com/repos/doomerlabs/doomer/releases/latest}"
+  default_latest_api="https://api.github.com/repos/doomerlabs/doomer/releases/latest"
+  latest_api="${ADVERSARY_LATEST_RELEASE_API:-$default_latest_api}"
   latest_metadata="${RUNNER_TEMP:?RUNNER_TEMP is required}/doomer-latest-release.json"
-  if ! download "$latest_api" "$latest_metadata"; then
+  if ! download "$latest_api" "$latest_metadata" "$default_latest_api"; then
     echo "No stable Doomer CLI release could be resolved from GitHub. Set cli-version explicitly to use a prerelease." >&2
     exit 2
   fi
@@ -46,7 +71,7 @@ fi
 case "$(uname -s)" in
   Linux) os=linux ;;
   Darwin) os=darwin ;;
-  *) echo "The push action supports Linux and macOS runners." >&2; exit 2 ;;
+  *) echo "The review action supports Linux and macOS runners." >&2; exit 2 ;;
 esac
 
 case "$(uname -m)" in
@@ -56,14 +81,15 @@ case "$(uname -m)" in
 esac
 
 archive="doomer_${version}_${os}_${arch}.tar.gz"
-base="${ADVERSARY_DOWNLOAD_BASE:-https://github.com/doomerlabs/doomer/releases/download/${version}}"
+release_base="https://github.com/doomerlabs/doomer/releases/download/${version}"
+base="${ADVERSARY_DOWNLOAD_BASE:-$release_base}"
 install_dir="${RUNNER_TEMP:?RUNNER_TEMP is required}/doomer-cli-${version}"
 download_dir="${RUNNER_TEMP}/doomer-download-${version}"
 rm -rf -- "$install_dir" "$download_dir"
 mkdir -p -- "$install_dir" "$download_dir"
 
-download "${base}/${archive}" "${download_dir}/${archive}"
-download "${base}/checksums.txt" "${download_dir}/checksums.txt"
+download "${base}/${archive}" "${download_dir}/${archive}" "${release_base}/${archive}"
+download "${base}/checksums.txt" "${download_dir}/checksums.txt" "${release_base}/checksums.txt"
 
 expected="$(awk -v artifact="$archive" '
   $2 == artifact || $2 == ("*" artifact) { print tolower($1) }

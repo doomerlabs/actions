@@ -7,7 +7,6 @@ Reusable GitHub Actions for publishing adversaries and submitting hosted Doomer 
 | [`version`](version) | Available | Synchronize release metadata and runtime identity, rebuild, verify, and commit from a release version. |
 | [`push`](push) | Available | Validate, build, package, and push an adversary to an OCI registry. |
 | [`review`](review) | Available | Submit the checked-out Git worktree for a hosted review using Doomer CLI 2026.10.17. |
-| [`run`](run) | Deprecated | Legacy local review execution; retained for existing workflows. |
 
 ## Version an adversary
 
@@ -225,205 +224,15 @@ The current snapshot API requires a service-account token with `registry:push` s
 
 ### Migrating from `run`
 
-Change `uses: doomerlabs/actions/run@v1` to `uses: doomerlabs/actions/review@v1`, select a hosted `project`, and supply a suitable token or existing login. Remove legacy local-execution inputs such as `adversaries`, model credentials, registry pull settings, and GitHub comment controls. Do not migrate a workflow that depends on completed findings or GitHub comments until those hosted capabilities are available. The new action path becomes available on `@v1` when a release containing this change is published; before then, test with this branch's commit SHA.
-
-## Legacy run action (deprecated)
-
-`run` retains its old implementation and pinned CLI `2026.9.30-beta.3` for compatibility. Do not set its CLI to `2026.10.17`: that release has no `doomer run` command. New hosted submission workflows should use `review`.
-
-The run action installs a Doomer CLI release, optionally authenticates for registry pulls, and executes `doomer run` against the checked-out source. Pull-request runs default to the PR diff, automatically post findings as a submitted GitHub review, and do not fail the check merely because findings exist. Configuration, authentication, network, and execution failures still fail the step. The action pulls accessible adversaries, detects which ones match the change, and runs the selected set. Set `adversaries` to one or more references to run an explicit set instead, or set `all-files: true` to review the entire repository. OIDC pulls from the Doomer registry fetch and verify the public team delegation automatically, so a valid hosted private signature can use host execution without the unsafe override. External copies such as GHCR remain untrusted. It supports model-backed adversaries through provider inputs and secrets. Use the same composite action from GitHub Actions or Depot CI (`runs-on: depot-ubuntu-latest`).
-
-```yaml
-name: Adversary review
-
-on:
-  pull_request:
-
-permissions:
-  contents: read
-  id-token: write
-  pull-requests: write
-
-jobs:
-  review:
-    runs-on: depot-ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-
-      - name: Run adversaries
-        id: review
-        uses: doomerlabs/actions/run@v1
-        with:
-          path: .
-          auth-mode: oidc
-          registry-namespace: your-team-slug
-          model-provider: openai
-          model: gpt-4o
-          model-api-key: ${{ secrets.OPENAI_API_KEY }}
-          format: json
-
-      - name: Report outcome
-        if: always()
-        run: |
-          echo "outcome=${{ steps.review.outputs.outcome }}"
-          echo "findings=${{ steps.review.outputs.findings-count }}"
-```
-
-When `cli-version` is omitted, the action installs its pinned default, `2026.9.30-beta.3`. Set `cli-version` explicitly to test a different release, and pin the action ref for reproducible CI. `path` defaults to `.`.
-
-### Artifact cache
-
-The action stores pulled adversaries in a content-addressed repository under `data-dir`. It still checks the remote catalog and resolves each OCI reference on every run; when the resolved digest is already present, the CLI reuses the local artifact without downloading its layers and verifies it before execution. `data-dir` defaults to `${RUNNER_TEMP}/adversary-data`, and an existing `ADVERSARY_DATA_DIR` environment value remains supported when the input is omitted.
-
-Cache only this artifact directory. Doomer credentials use the operating system's separate configuration directory and are not written beneath `data-dir`. The artifact cache does contain the complete contents of private adversaries, so scope access to jobs that are authorized to pull those packages.
-
-Depot CI can persist the directory with a durable cache disk. Use a repository-specific disk name unless cross-repository sharing is intentional:
-
-```yaml
-- name: Mount adversary cache
-  uses: depot/cache-mount@v1
-  with:
-    name: adversary-${{ github.event.repository.id }}-v1
-    path: /mnt/doomer
-
-- name: Run adversaries
-  uses: doomerlabs/actions/run@v1
-  with:
-    data-dir: /mnt/doomer
-    adversaries: auto
-    auth-mode: oidc
-    registry-namespace: your-team-slug
-```
-
-Other CI cache implementations can restore and save `${{ runner.temp }}/adversary-data` while using the action's default, or mount a different absolute path and pass it through `data-dir`. Include `v1` in the cache key so a future incompatible repository format can move to a fresh cache.
-
-Automatic selection is the default. These are equivalent:
-
-```yaml
-- uses: doomerlabs/actions/run@v1
-
-- uses: doomerlabs/actions/run@v1
-  with:
-    adversaries: auto
-```
-
-To bypass automatic selection, provide explicit references. Each explicit adversary still applies its own changed-file trigger unless `force: true` is set:
-
-```yaml
-- uses: doomerlabs/actions/run@v1
-  with:
-    adversaries: |
-      web/nextjs
-      web/react
-```
-
-Pull-request scope is inferred from the CI environment. Use `base` and `head` to override the inferred diff, or `all-files: true` to opt into a full-repository scan. `base`/`head` and `all-files` cannot be combined.
-
-### Pull-request reviews
-
-On `pull_request` and `pull_request_target` events, `github-review: auto` posts findings through GitHub's GraphQL review API and `github-submit: true` submits the review as an informational comment. Grant `pull-requests: write`; the action uses `github.token` unless `github-token` is supplied. After a complete successful rerun, the action resolves prior threads from the same GitHub identity when their findings are no longer reported by an adversary that ran again. Set `resolve-addressed-comments: false` to leave those threads open. Partial or failed reviews never resolve comments. The default summary covers actual findings only and uses the configured model provider for one cross-adversary synthesis; clean adversaries add nothing, and a clean run posts no review. Set `include-summary: false` to omit that persistent summary while retaining inline findings and findings that cannot be placed on the diff. Set `github-review: false` to keep results in the job log only.
-
-For CLI releases that support comment voice controls, set `comment-tone` to `direct`, `neutral`, or `coaching`, `comment-conciseness` to `terse`, `standard`, or `explanatory`, and `comment-politeness` and `comment-formality` independently to `low`, `medium`, or `high`. Politeness also accepts `very-low` for sharp, evidence-backed criticism of the PR, never its author. Low formality permits occasional mild swearing, never abuse. Omit inputs to use the installed CLI's defaults. These inputs apply when `github-review` is enabled. Pin `cli-version` to a release containing all requested controls.
-
-### Authentication
-
-Default `auth-mode: none` skips login so public and local adversaries work without a token. For private pulls, prefer `auth-mode: oidc`, add `permissions: id-token: write`, trust the GitHub or Depot repository identity on the team page, and set `registry-namespace`. The exchanged pull credential lasts ten minutes and the action removes its unique temporary profile afterward.
-
-```yaml
-- uses: doomerlabs/actions/run@v1
-  with:
-    adversaries: your-team/private-reviewer
-    auth-mode: oidc
-    registry-namespace: your-team-slug
-```
-
-Use `auth-mode: token` with a pull-scoped service-account token when OIDC is unavailable. `auth-mode: oauth` uses interactive device login. `auth-mode: existing` uses a preconfigured CLI profile or Docker credential store and never logs in or out.
-
-### Model-backed adversaries
-
-CI reviews require a model and a working provider credential: a partial review is not a passing review. Provide `model-provider` (`openai`, `cloudflare`, `anthropic`, `fireworks`, or `camel`), `model`, and `model-api-key` (a secret). The action maps the key to the selected provider's credential environment variable and never places API keys on the CLI argument list. For Cloudflare AI Gateway, also set `cloudflare-account-id`; `cloudflare-gateway-id` is optional. Provider-specific base URL inputs set the corresponding `ADVERSARY_*_BASE_URL` overrides.
-
-You may instead set `ADVERSARY_MODEL`, optionally `ADVERSARY_MODEL_PROVIDER`, and the standard provider credential environment variable on the step. The provider may be omitted only when exactly one supported provider credential is present. Missing configuration fails before the review starts; an unusable credential or another reviewer execution failure that makes the composed review incomplete also fails the step.
-
-### Exit codes and findings
-
-The action records the CLI exit code and outcome in its outputs. By default, CLI exit `1` (findings) becomes a successful step after the review is posted; exits `2`–`4` still fail. An otherwise successful partial review is promoted to exit `3` and `outcome: failure`. Set `fail-on-findings: true` only when findings should block the check. With `format: json`, `findings-count` and `result-file` are populated from captured stdout.
-
-The entire review command has a 10-minute wall-clock deadline, including registry pulls, indexing, and all selected adversaries. Set `timeout-minutes: 5` for a shorter run or `timeout-minutes: 20` for a longer one under the action’s `with:` inputs. Positive fractional minutes are also supported. On expiry, the action terminates the review processes, allows up to 5 seconds for shutdown, then force-kills remaining processes and fails with `exit-code: 124` and `outcome: failure`, even when `fail-on-findings` is false. CLI installation and authentication are outside this deadline; a workflow/job timeout can bound those too. The standalone CLI default is unchanged. The existing `timeout` input remains a separate per-adversary execution limit.
-
-### Run inputs
-
-| Input | Required | Default | Description |
-| --- | --- | --- | --- |
-| `adversaries` | no | `auto` | `auto` to pull and select matching accessible adversaries, or one or more explicit refs (whitespace or newlines). |
-| `cli-version` | no | `2026.9.30-beta.3` | Exact Doomer CLI release tag. |
-| `path` | no | `.` | Source directory to review. |
-| `data-dir` | no | `${RUNNER_TEMP}/adversary-data` | Absolute directory containing cacheable adversary artifacts. `ADVERSARY_DATA_DIR` is used as a fallback when set. |
-| `base` | no | — | Git base ref for change detection. |
-| `head` | no | — | Git head ref for change detection. |
-| `all-files` | no | `false` | Opt into a full-repository scan instead of the inferred PR or branch diff. |
-| `github-review` | no | `auto` | `auto`, `true`, or `false`; auto posts on pull-request events. |
-| `review-tracks` | no | `both` | `both`, `standard`, or `adversarial`; the latter two require a CLI release with intent routing. |
-| `github-submit` | no | `true` | Submit the GitHub review as an informational comment instead of leaving it pending. |
-| `include-summary` | no | `true` | Include the aggregate assessment/opinion in the review body; findings are still posted when false. |
-| `resolve-addressed-comments` | no | `true` | Resolve prior Adversary threads whose findings disappear after a complete successful rerun. |
-| `comment-tone` | no | CLI default | `direct`, `neutral`, or `coaching`; requires a CLI release with comment voice controls. |
-| `comment-conciseness` | no | CLI default | `terse`, `standard`, or `explanatory`; requires a CLI release with comment voice controls. |
-| `comment-politeness` | no | CLI default | `very-low`, `low`, `medium`, or `high`; controls bluntness without personal attacks. |
-| `comment-formality` | no | CLI default | `low`, `medium`, or `high`; low allows occasional mild swearing. |
-| `github-token` | no | `github.token` | Token used to post the GitHub review. |
-| `builder` | no | `local` | `local` or `docker` builder for local adversaries. |
-| `build` | no | `false` | Build a local adversary before running. |
-| `force` | no | `false` | Run even when file triggers do not match. |
-| `format` | no | `text` | `text` or `json` output. |
-| `keep-temp` | no | `false` | Keep the temporary run directory. |
-| `no-network` | no | `false` | Require network isolation for the adversary child. |
-| `verbose` | no | `false` | Detailed execution diagnostics. |
-| `include-suppressed` | no | `false` | Request suppressed findings when supported. |
-| `shell` | no | `false` | UNSAFE host shell in the adversary working directory. |
-| `allow-unsafe-host-execution` | no | `false` | Allow unrestricted HostExecutor for an unknown publisher. |
-| `timeout-minutes` | no | `10` | Positive wall-clock minutes for the entire review command. |
-| `timeout` | no | — | Max individual adversary execution time (Go duration, for example `10m`). Empty or `0` disables this individual limit. |
-| `build-timeout` | no | — | Max explicit local build time (Go duration). |
-| `model-provider` | unless exactly one provider credential is in the environment | — | `openai`, `cloudflare`, `anthropic`, `fireworks`, or `camel`. |
-| `model` | yes* | — | Provider model identifier. May instead be supplied through `ADVERSARY_MODEL`. |
-| `model-api-key` | yes* | — | Provider API key secret mapped from `model-provider`. May instead be supplied through the provider's standard environment variable. |
-| `openai-base-url` | no | — | OpenAI-compatible base URL override. |
-| `cloudflare-account-id` | with Cloudflare | — | Cloudflare account ID. |
-| `cloudflare-gateway-id` | no | — | Optional Cloudflare AI Gateway ID. |
-| `cloudflare-base-url` | no | — | Cloudflare AI REST API base URL override. |
-| `anthropic-base-url` | no | — | Anthropic-compatible base URL override. |
-| `fireworks-base-url` | no | — | Fireworks-compatible base URL override. |
-| `camel-base-url` | no | — | Camel-compatible base URL override. |
-| `fail-on-findings` | no | `false` | Fail the step when the review reports findings. |
-| `api-url` | no | hosted API | API endpoint used for login. |
-| `profile` | no | ephemeral `run-action-<id>` for token/OAuth; CLI default otherwise | For `existing`, the CLI profile to use (never logged out). For token/OAuth, used only as a name prefix for a unique action-owned profile that is removed after the step. |
-| `auth-mode` | no | `none` | `none`, `oidc`, `token`, `oauth`, or `existing`. |
-| `token` | with token auth | — | Pull-scoped service-account token secret. |
-| `client-name` | no | `Doomer run action` | Name shown on the OAuth device-approval screen. |
-| `registry-host` | no | — | Registry host override. |
-| `registry-namespace` | no | — | Team registry namespace for service-account login. |
-
-### Run outputs
-
-| Output | Description |
-| --- | --- |
-| `exit-code` | CLI exit code (`0`–`4`), or `124` when the action review deadline expires. |
-| `findings-count` | Finding count when `format` is `json`; empty for text. |
-| `result-file` | Path to captured JSON stdout when `format` is `json`. |
-| `outcome` | `success`, `findings`, or `failure`. |
+Change `uses: doomerlabs/actions/run@v1` to `uses: doomerlabs/actions/review@v1`, select a hosted `project`, and supply a suitable token or existing login. Remove legacy local-execution inputs such as `adversaries`, model credentials, registry pull settings, and GitHub comment controls. The unsupported `run` action has been removed. Workflows that depend on completed findings or GitHub comments need a separate integration until those hosted capabilities are available. The new action path becomes available on `@v1` when a release containing this change is published; before then, test with this branch's commit SHA.
 
 ## Security model
 
-- **Push**: target source is built because packaging is required. Use only on reviewed code and protected release refs. Validation and packaging finish before authentication so target build scripts never see the service-account token. Prefer a push-scoped token.
-- **Run**: read-only review of the checked-out tree. Prefer a pull-scoped service-account token (or `auth-mode: none` for public/local adversaries). Do not reuse push credentials in ordinary review jobs.
-- The CLI archive is checksum-verified before execution. Pin `cli-version` in the caller workflow when exact toolchain reproducibility is required.
-- OIDC credentials expire after ten minutes. OIDC and service-account tokens are passed through standard input, removed from the environment before `run`/`push`, and temporary CLI profiles are removed afterward.
-- The run action's `data-dir` contains package payloads and trust metadata, never credentials. Treat caches containing private adversaries as private data and scope them accordingly.
-- Model API keys are passed only through environment variables (never CLI flags) and are unset from action input env before the CLI is invoked.
-- Neither action requires write permission for the caller repository. Registry authority comes only from the supplied credential flow.
+- **Push** builds the target source before authentication. Use reviewed code and protected release refs. Registry authority comes from the supplied credential flow.
+- **Review** uploads a source snapshot to the configured hosted project. Token mode uses an isolated temporary CLI configuration and removes it after submission or failure. Existing mode preserves the runner's login.
+- The current snapshot API requires a service-account token with `registry:push` scope; it does not support the publishing action's OIDC exchange.
+- CLI release archives are checksum-verified. Pin `cli-version` and the action ref when exact toolchain reproducibility is required.
+- Neither action requires write permission for the caller repository.
 
 ## Development
 

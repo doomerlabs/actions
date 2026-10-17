@@ -18,7 +18,7 @@ DOWNLOAD_BASE = f"https://github.com/doomerlabs/doomer/releases/download/{VERSIO
 
 
 class InstallAuthTest(unittest.TestCase):
-    installer = ROOT / "run/scripts/install.sh"
+    installer = ROOT / "review/scripts/install.sh"
 
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()

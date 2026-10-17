@@ -8,7 +8,7 @@ trap 'rm -rf "$tmp"' EXIT
 case "$(uname -s)" in Linux) os=linux ;; Darwin) os=darwin ;; *) exit 1 ;; esac
 case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; *) exit 1 ;; esac
 
-for action in run push review; do
+for action in push review; do
   # Exercise the value the action runner supplies when cli-version is omitted.
   version="$(awk '/^  cli-version:/ { input = 1; next } input && /^    default:/ { print $2; exit }' "$root/$action/action.yml")"
   [[ -n "$version" ]]

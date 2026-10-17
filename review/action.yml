@@ -52,6 +52,7 @@ runs:
       shell: bash
       env:
         INPUT_CLI_VERSION: ${{ inputs.cli-version }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: bash "$GITHUB_ACTION_PATH/scripts/install.sh"
     - name: Submit hosted review
       id: review

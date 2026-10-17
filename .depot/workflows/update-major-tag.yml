@@ -32,7 +32,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          for action in push review run; do
+          for action in push review; do
             version="$(awk '/^  cli-version:/ { input = 1; next } input && /^    default:/ { print $2; exit }' "$action/action.yml")"
             test -n "$version"
             INPUT_CLI_VERSION="$version" bash "$action/scripts/install.sh"
