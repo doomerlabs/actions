@@ -72,7 +72,7 @@ During migration, do not create the tag until the version step succeeds. The bac
 
 ## Push an adversary
 
-The push action installs a Doomer CLI release, verifies the release archive against `checksums.txt`, validates the project, packages it, and pushes both the OCI image manifest and adversary-manifest referrer. Private publishes to the authenticated team namespace on the Doomer registry are signed automatically; the publisher receives only the signature and public team delegation, never a private key.
+The push action uses the current `doomer adversary pack` and `doomer adversary push` commands. It installs a Doomer CLI release from `doomerlabs/doomer`, verifies the release archive against `checksums.txt`, validates the project, packages it, and pushes both the OCI image manifest and adversary-manifest referrer. Private publishes to the authenticated team namespace on the Doomer registry are signed automatically; the publisher receives only the signature and public team delegation, never a private key.
 
 ```yaml
 name: Push adversary
@@ -110,7 +110,7 @@ jobs:
         run: echo "Pushed ${{ steps.push.outputs.reference }} at ${{ steps.push.outputs.digest }}"
 ```
 
-When `cli-version` is omitted, the action installs its pinned default, `2026.9.30-beta.3`. Set `cli-version` explicitly to test a different release. Pin the action itself to an exact release tag or full commit SHA for reproducible CI.
+When `cli-version` is omitted, the push action installs its pinned default, `2026.10.17`. Set `cli-version` explicitly to test a different release. Pin the action itself to an exact release tag or full commit SHA for reproducible CI.
 
 The local builder installs dependencies from `package-lock.json`, `pnpm-lock.yaml`, or `yarn.lock`; configure the matching Node runtime before invoking the action. pnpm and Yarn installs require Corepack, which is not bundled with Node.js 25 and later; install Corepack separately on those runtimes. For reproducible pnpm or Yarn installs, pin the exact tool version in the `packageManager` field of `package.json`.
 
@@ -127,7 +127,7 @@ Set `auth-mode: existing` to skip login. This supports a runner with a preconfig
 ```yaml
 - uses: doomerlabs/actions/push@v1
   with:
-    cli-version: 2026.9.30-beta.3
+    cli-version: 2026.10.17
     auth-mode: existing
     remote-reference: ghcr.io/acme/dockerfile:0.1.0
 ```
@@ -138,7 +138,7 @@ For hosted pushes, `repository-name` overrides the remote name independently of 
 
 | Input | Required | Default | Description |
 | --- | --- | --- | --- |
-| `cli-version` | no | `2026.9.30-beta.3` | Exact Doomer CLI release tag. |
+| `cli-version` | no | `2026.10.17` | Exact Doomer CLI release tag. |
 | `path` | no | `.` | Adversary project directory. |
 | `builder` | no | `local` | `local` or `docker` package builder. |
 | `install-dependencies` | no | `true` | Install dependencies from a supported lockfile before local packaging. Set to `false` when already installed; ignored by the Docker builder. |

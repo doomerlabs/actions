@@ -13,7 +13,7 @@ grep -Fq 'using: composite' "$root/push/action.yml"
 grep -Fq 'cli-version:' "$root/push/action.yml"
 cli_version_input="$(sed -n '/^  cli-version:/,/^  path:/p' "$root/push/action.yml")"
 grep -Fq 'required: false' <<<"$cli_version_input"
-grep -Fq 'default: 2026.9.30-beta.3' <<<"$cli_version_input"
+grep -Fq 'default: 2026.10.17' <<<"$cli_version_input"
 if grep -Fq 'required: true' <<<"$cli_version_input"; then
   echo "cli-version is still required" >&2
   exit 1
@@ -104,6 +104,9 @@ set -euo pipefail
 profile=default
 if [[ "${1:-}" == --profile ]]; then profile="$2"; shift 2; fi
 command="$1"; shift
+if [[ "$command" == adversary ]]; then command="$1"; shift; else
+  case "$command" in login|logout) ;; *) echo "artifact command must use adversary" >&2; exit 9 ;; esac
+fi
 if [[ -n "${INPUT_TOKEN:-}" ]]; then
   echo "$command received the service account token in its environment" >&2
   exit 88
@@ -120,7 +123,6 @@ case "$command" in
     if [[ "${FAIL_LOGIN:-false}" == true ]]; then exit 7; fi
     ;;
   logout) [[ "$1" == --local-only ]] ;;
-  validate) [[ "$1" == project || "$1" == project-pnpm ]] ;;
   pack) printf '%s\n' '{"schemaVersion":2,"command":"pack","data":{"canonicalReference":"example:1.0.0"}}' ;;
   push)
     reference="$2"
@@ -148,7 +150,7 @@ PATH="$fake_bin:$PATH" FAKE_LOG="$log" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$pac
   INPUT_PATH=project INPUT_BUILDER=local INPUT_INSTALL_DEPENDENCIES=true INPUT_NAME='' \
   bash -c 'cd "$1" && bash "$2"' _ "$tmp/work" "$root/push/scripts/package.sh"
 
-grep -Fq 'validate profile=default args=project' "$log"
+grep -Fq 'pack profile=default args=project --check' "$log"
 grep -Fq 'npm args=ci' "$log"
 grep -Fq 'pack profile=default args=project --builder local --format json' "$log"
 grep -Fq 'local-reference=example:1.0.0' "$package_output"

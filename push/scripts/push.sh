@@ -135,8 +135,8 @@ elif [[ "$auth_mode" == oauth ]]; then
 fi
 
 push_output="${RUNNER_TEMP:?RUNNER_TEMP is required}/adversary-push.json"
-push_args=(push "$local_reference" --format json)
-if [[ -n "$remote_reference" ]]; then push_args=(push "$local_reference" "$remote_reference" --format json); fi
+push_args=(adversary push "$local_reference" --format json)
+if [[ -n "$remote_reference" ]]; then push_args=(adversary push "$local_reference" "$remote_reference" --format json); fi
 if [[ -n "$profile" ]]; then
   doomer --profile "$profile" "${push_args[@]}" >"$push_output"
 else
@@ -188,7 +188,7 @@ print(f"{repository}:latest")
 PY
   )"
   latest_output="${RUNNER_TEMP}/adversary-push-latest.json"
-  latest_args=(push "$local_reference" "$latest_reference" --format json)
+  latest_args=(adversary push "$local_reference" "$latest_reference" --format json)
   if [[ -n "$profile" ]]; then
     doomer --profile "$profile" "${latest_args[@]}" >"$latest_output"
   else
