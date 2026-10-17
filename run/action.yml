@@ -1,5 +1,5 @@
-name: Run Doomer
-description: Install the Doomer CLI and automatically select or explicitly run adversaries against a local repository.
+name: Run Doomer (deprecated)
+description: Deprecated legacy local review action. Use the review action for hosted snapshot submissions.
 
 inputs:
   adversaries:

@@ -1,12 +1,13 @@
 # Adversary Actions
 
-Reusable GitHub Actions for pushing and running Doomer adversaries.
+Reusable GitHub Actions for publishing adversaries and submitting hosted Doomer reviews.
 
 | Action | Status | Purpose |
 | --- | --- | --- |
 | [`version`](version) | Available | Synchronize release metadata and runtime identity, rebuild, verify, and commit from a release version. |
 | [`push`](push) | Available | Validate, build, package, and push an adversary to an OCI registry. |
-| [`run`](run) | Available | Run one or more adversaries against the checked-out repository. |
+| [`review`](review) | Available | Submit the checked-out Git worktree for a hosted review using Doomer CLI 2026.10.17. |
+| [`run`](run) | Deprecated | Legacy local review execution; retained for existing workflows. |
 
 ## Version an adversary
 
@@ -166,7 +167,69 @@ For hosted pushes, `repository-name` overrides the remote name independently of 
 | `namespace-signature-digest` | Platform-issued namespace signature referrer digest for a hosted private publish; empty for external or public repositories. |
 | `namespace-trust-digest` | Platform-endorsed team trust referrer digest for a hosted private publish; empty for external or public repositories. |
 
-## Run adversaries
+## Submit a hosted review
+
+`doomerlabs/actions/review@v1` installs `doomerlabs/doomer` **2026.10.17** by default and executes `doomer review`. Hosted project settings select the model and reviewers; no model-provider secrets or local adversary installation are required.
+
+```yaml
+name: Doomer review
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Submit hosted review
+        id: review
+        uses: doomerlabs/actions/review@v1
+        with:
+          project: your-project-slug
+          token: ${{ secrets.DOOMER_REVIEW_TOKEN }}
+      - name: Report submission
+        env:
+          REVIEW_ID: ${{ steps.review.outputs.review-id }}
+          STATUS: ${{ steps.review.outputs.status }}
+        run: printf 'Review %s (%s)\n' "$REVIEW_ID" "$STATUS"
+```
+
+The action reviews the tree actually checked out, including tracked edits and non-ignored untracked files. Check out the PR head explicitly rather than GitHub's synthetic merge commit, and fetch the PR base commit. The action defaults `base` to the pull request's base SHA; other events use the CLI's baseline inference. Set `base` to override either behavior. The CLI's snapshot size and file-type restrictions apply.
+
+The current snapshot API requires a service-account token with `registry:push` scope, even though this action does not publish an adversary. Hosted reviews must be enabled for the project. Token mode uses an isolated temporary configuration directory and removes it on exit. `auth-mode: existing` uses a preconfigured runner login, optionally selected with `profile`, without modifying that login. Snapshot submissions currently reject OIDC CI credentials, so the legacy action's OIDC pull login cannot be reused here. Fork PR workflows need an explicitly authorized credential strategy; ordinary fork PRs do not receive repository secrets.
+
+**Submission is asynchronous.** A successful step means the server accepted the snapshot, not that the review passed or completed. CLI 2026.10.17 has no review wait/status or review-comment command. This action does not post GitHub comments, resolve threads, return findings, or implement `fail-on-findings`. Those capabilities require a follow-up CLI/API integration; the legacy local review flags cannot be passed to `doomer review`.
+
+| Input | Required | Default | Description |
+| --- | --- | --- | --- |
+| `cli-version` | no | `2026.10.17` | Exact release from `doomerlabs/doomer`. |
+| `project` | yes | — | Hosted project slug or ID. |
+| `path` | no | `.` | Directory in the Git worktree to upload. |
+| `base` | no | PR base SHA or CLI default | Local baseline ref or commit. |
+| `auth-mode` | no | `token` | `token` or `existing`. |
+| `token` | with token mode | — | Service-account token supplied as a secret. |
+| `profile` | no | Selected CLI profile | Only for `existing` mode. |
+| `api-url` | no | CLI/profile default | API endpoint override. |
+| `timeout-minutes` | no | `10` | Snapshot capture and submission deadline, not a hosted execution deadline. |
+
+| Output | Description |
+| --- | --- |
+| `review-id` | Submitted hosted review ID. |
+| `status` | Server status when the snapshot was submitted. |
+| `result-file` | Submission JSON file; does not contain completed review findings. |
+
+### Migrating from `run`
+
+Change `uses: doomerlabs/actions/run@v1` to `uses: doomerlabs/actions/review@v1`, select a hosted `project`, and supply a suitable token or existing login. Remove legacy local-execution inputs such as `adversaries`, model credentials, registry pull settings, and GitHub comment controls. Do not migrate a workflow that depends on completed findings or GitHub comments until those hosted capabilities are available. The new action path becomes available on `@v1` when a release containing this change is published; before then, test with this branch's commit SHA.
+
+## Legacy run action (deprecated)
+
+`run` retains its old implementation and pinned CLI `2026.9.30-beta.3` for compatibility. Do not set its CLI to `2026.10.17`: that release has no `doomer run` command. New hosted submission workflows should use `review`.
 
 The run action installs a Doomer CLI release, optionally authenticates for registry pulls, and executes `doomer run` against the checked-out source. Pull-request runs default to the PR diff, automatically post findings as a submitted GitHub review, and do not fail the check merely because findings exist. Configuration, authentication, network, and execution failures still fail the step. The action pulls accessible adversaries, detects which ones match the change, and runs the selected set. Set `adversaries` to one or more references to run an explicit set instead, or set `all-files: true` to review the entire repository. OIDC pulls from the Doomer registry fetch and verify the public team delegation automatically, so a valid hosted private signature can use host execution without the unsafe override. External copies such as GHCR remain untrusted. It supports model-backed adversaries through provider inputs and secrets. Use the same composite action from GitHub Actions or Depot CI (`runs-on: depot-ubuntu-latest`).
 
