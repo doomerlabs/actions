@@ -151,12 +151,12 @@ with open(sys.argv[1], encoding="utf-8") as stream:
 if envelope.get("command") != "push" or not isinstance(envelope.get("data"), dict):
     raise SystemExit("doomer push returned an unexpected JSON envelope")
 data = envelope["data"]
-for key in ("canonicalReference", "digest", "manifestDigest"):
+for key in ("canonicalReference", "digest"):
     value = data.get(key)
     if not isinstance(value, str) or not value:
         raise SystemExit(f"doomer push did not return {key}")
     print(value)
-for key in ("namespaceSignatureDigest", "namespaceTrustDigest"):
+for key in ("manifestDigest", "namespaceSignatureDigest", "namespaceTrustDigest"):
     value = data.get(key, "")
     if not isinstance(value, str):
         raise SystemExit(f"doomer push returned invalid {key}")
@@ -167,7 +167,7 @@ digest="$(sed -n '2p' "$push_values")"
 manifest_digest="$(sed -n '3p' "$push_values")"
 namespace_signature_digest="$(sed -n '4p' "$push_values")"
 namespace_trust_digest="$(sed -n '5p' "$push_values")"
-if [[ -z "$reference" || -z "$digest" || -z "$manifest_digest" || "$(wc -l <"$push_values" | tr -d ' ')" != 5 ]]; then
+if [[ -z "$reference" || -z "$digest" || "$(wc -l <"$push_values" | tr -d ' ')" != 5 ]]; then
   echo "doomer push returned incomplete metadata" >&2
   exit 3
 fi
@@ -205,7 +205,7 @@ if envelope.get("command") != "push" or not isinstance(data, dict):
     raise SystemExit("doomer latest push returned an unexpected JSON envelope")
 if data.get("canonicalReference") != sys.argv[2]:
     raise SystemExit("doomer latest push returned an unexpected canonical reference")
-if data.get("digest") != sys.argv[3] or data.get("manifestDigest") != sys.argv[4]:
+if data.get("digest") != sys.argv[3] or data.get("manifestDigest", "") != sys.argv[4]:
     raise SystemExit("doomer latest push returned different digests")
 PY
 fi

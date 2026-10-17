@@ -64,7 +64,7 @@ outputs:
     description: Pushed OCI image manifest digest.
     value: ${{ steps.push.outputs.digest }}
   manifest-digest:
-    description: Pushed adversary manifest referrer digest.
+    description: Optional adversary manifest referrer digest; empty when the CLI does not report one.
     value: ${{ steps.push.outputs.manifest-digest }}
   local-reference:
     description: Local canonical reference produced by packaging.
