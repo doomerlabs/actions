@@ -18,7 +18,7 @@ if [[ ! -d "$project_path" ]]; then
   exit 2
 fi
 
-doomer validate "$project_path"
+doomer adversary pack "$project_path" --check >/dev/null
 
 if [[ "$install_dependencies" == true && "$builder" == local ]]; then
   if [[ -f "$project_path/package-lock.json" ]]; then
@@ -42,7 +42,7 @@ if [[ "$install_dependencies" == true && "$builder" == local ]]; then
 fi
 
 pack_output="${RUNNER_TEMP:?RUNNER_TEMP is required}/adversary-pack.json"
-pack_args=(pack "$project_path" --builder "$builder" --format json)
+pack_args=(adversary pack "$project_path" --builder "$builder" --format json)
 if [[ -n "${INPUT_NAME:-}" ]]; then pack_args+=(--name "$INPUT_NAME"); fi
 doomer "${pack_args[@]}" >"$pack_output"
 
