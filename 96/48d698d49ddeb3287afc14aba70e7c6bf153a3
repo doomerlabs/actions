@@ -1,0 +1,28 @@
+test/timeout.py
+  s_1fd5568067f21a::t_41f4641127b464 84-103,113,126-163,165,167-183,185,188
+  s_1fd5568067f21a::t_07dd20fb82ef83 189-194
+README.md
+  s_1fd5568067f21a::t_a354aaaa1060bd 217
+review/action.yml
+  s_1fd5568067f21a::t_48b01eb3cfcf19 33
+review/scripts/review.sh
+  s_1fd5568067f21a::t_a9f47793711323 31-35,44-45,55-76,86,95-102
+test/review.sh
+  s_1fd5568067f21a::t_3ef27d91ee11bd 21,52-54,56-59,84-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9648d698d49ddeb3287afc14aba70e7c6bf153a3",
+  "prompts": {},
+  "sessions": {
+    "s_1fd5568067f21a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a14c25-c11e-7741-9fcc-f0b2322650bc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marc Campbell <marc.e.campbell@gmail.com>"
+    }
+  }
+}
