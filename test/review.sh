@@ -18,6 +18,7 @@ if 'login' in args:
 assert 'review' in args
 assert '--format' in args and args[args.index('--format') + 1] == 'json'
 if os.environ.get('FAIL_REVIEW'):
+    print('submission diagnostic from stdout')
     sys.exit(7)
 print(os.environ.get('REVIEW_RESPONSE', '{"schemaVersion":1,"command":"review","data":{"id":"review-123","status":"queued"}}'))
 CLI
@@ -48,10 +49,14 @@ assert not os.path.exists(calls[0]['config'])
 PY
 for failure in FAIL_LOGIN FAIL_REVIEW; do
   : > "$GITHUB_OUTPUT"
-  if env "$failure=7" bash "$root/review/scripts/review.sh" >"$tmp/error" 2>&1; then
-    echo "$failure was ignored" >&2; exit 1
-  fi
+  status=0
+  env "$failure=7" bash "$root/review/scripts/review.sh" >"$tmp/error" 2>&1 || status=$?
+  [[ "$status" == 7 ]]
   [[ ! -s "$GITHUB_OUTPUT" ]]
+  if [[ "$failure" == FAIL_REVIEW ]]; then
+    grep -Fq 'submission diagnostic from stdout' "$tmp/error"
+    grep -Fq 'Review submission output saved to:' "$tmp/error"
+  fi
   [[ -z "$(find "$RUNNER_TEMP" -name 'doomer-review-config.*' -print)" ]]
 done
 unset INPUT_TOKEN
@@ -76,8 +81,14 @@ for response in \
   [[ ! -s "$GITHUB_OUTPUT" ]]
 done
 : > "$REVIEW_TEST_LOG"
-if INPUT_TIMEOUT_MINUTES=NaN bash "$root/review/scripts/review.sh" >"$tmp/error" 2>&1; then exit 1; fi
-[[ ! -s "$REVIEW_TEST_LOG" ]]
+for invalid in NaN 0 -1 10m; do
+  status=0
+  INPUT_TIMEOUT_MINUTES="$invalid" bash "$root/review/scripts/review.sh" >"$tmp/error" 2>&1 || status=$?
+  [[ "$status" == 2 ]]
+  grep -Fq '::error::timeout-minutes must be a positive finite number' "$tmp/error"
+  if grep -Fq Traceback "$tmp/error"; then exit 1; fi
+  [[ ! -s "$REVIEW_TEST_LOG" ]]
+done
 if INPUT_AUTH_MODE=oidc bash "$root/review/scripts/review.sh" >"$tmp/error" 2>&1; then exit 1; fi
 [[ ! -s "$REVIEW_TEST_LOG" ]]
 echo 'hosted review action tests passed'

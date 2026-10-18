@@ -30,7 +30,7 @@ inputs:
     description: Doomer API endpoint. Omit to use the CLI or existing profile default.
     required: false
   timeout-minutes:
-    description: Maximum minutes for snapshot capture and submission, not completion of the hosted review.
+    description: Maximum minutes for each CLI operation (login and snapshot submission), not completion of the hosted review.
     required: false
     default: "10"
 

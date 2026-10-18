@@ -214,7 +214,7 @@ The current snapshot API requires a service-account token with `registry:push` s
 | `token` | with token mode | — | Service-account token supplied as a secret. |
 | `profile` | no | Selected CLI profile | Only for `existing` mode. |
 | `api-url` | no | CLI/profile default | API endpoint override. |
-| `timeout-minutes` | no | `10` | Snapshot capture and submission deadline, not a hosted execution deadline. |
+| `timeout-minutes` | no | `10` | Per-operation deadline for login and snapshot submission, not hosted execution. |
 
 | Output | Description |
 | --- | --- |

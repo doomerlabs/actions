@@ -28,7 +28,11 @@ import sys
 sys.path.insert(0, sys.argv[1])
 from timeout import timeout_seconds
 import os
-timeout_seconds(os.environ.get('INPUT_TIMEOUT_MINUTES', ''))
+try:
+    timeout_seconds(os.environ.get('INPUT_TIMEOUT_MINUTES', ''))
+except ValueError as error:
+    print(f'::error::{error}', file=sys.stderr)
+    raise SystemExit(2)
 PY
 
 config_dir=''
@@ -37,6 +41,8 @@ cleanup() {
 }
 trap cleanup EXIT
 review_pid=''
+launching_command=false
+pending_signal=0
 cancel_review() {
   local code="$1"
   trap '' TERM INT
@@ -46,8 +52,28 @@ cancel_review() {
   fi
   exit "$code"
 }
-trap 'cancel_review 143' TERM
-trap 'cancel_review 130' INT
+handle_signal() {
+  # Bash runs traps between commands, including between '&' and recording $!.
+  if [[ "$launching_command" == true ]]; then
+    pending_signal="$1"
+  else
+    cancel_review "$1"
+  fi
+}
+trap 'handle_signal 143' TERM
+trap 'handle_signal 130' INT
+
+run_bounded() {
+  local code
+  launching_command=true
+  python3 "$script_dir/timeout.py" "$@" <&0 &
+  review_pid=$!
+  launching_command=false
+  if [[ "$pending_signal" != 0 ]]; then cancel_review "$pending_signal"; fi
+  if wait "$review_pid"; then code=0; else code=$?; fi
+  review_pid=''
+  return "$code"
+}
 
 cli=(doomer)
 if [[ -n "${INPUT_API_URL:-}" ]]; then cli+=(--api-url "$INPUT_API_URL"); fi
@@ -57,7 +83,7 @@ if [[ "$auth_mode" == token ]]; then
   chmod 700 "$config_dir"
   export DOOMER_CONFIG_DIR="$config_dir"
   cli+=(--profile review-action)
-  printf '%s\n' "$token" | "${cli[@]}" login --token-stdin
+  run_bounded "${cli[@]}" login --token-stdin <<<"$token"
 elif [[ -n "${INPUT_PROFILE:-}" ]]; then
   cli+=(--profile "$INPUT_PROFILE")
 fi
@@ -66,14 +92,14 @@ token=''
 result_file="$(mktemp "${RUNNER_TEMP:?RUNNER_TEMP is required}/doomer-review.XXXXXX")"
 args=(review --project "$project" --path "$path" --format json)
 if [[ -n "$base" ]]; then args+=(--base "$base"); fi
-set +e
-python3 "$script_dir/timeout.py" "${cli[@]}" "${args[@]}" >"$result_file" &
-review_pid=$!
-wait "$review_pid"
-exit_code=$?
-review_pid=''
-set -e
-if [[ "$exit_code" != 0 ]]; then exit "$exit_code"; fi
+if run_bounded "${cli[@]}" "${args[@]}" >"$result_file"; then
+  exit_code=0
+else
+  exit_code=$?
+  cat "$result_file" >&2
+  printf 'Review submission output saved to: %s\n' "$result_file" >&2
+  exit "$exit_code"
+fi
 
 python3 - "$result_file" "${GITHUB_OUTPUT:?GITHUB_OUTPUT is required}" <<'PY'
 import json
