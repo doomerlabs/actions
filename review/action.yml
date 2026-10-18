@@ -1,0 +1,74 @@
+name: Review with Doomer
+description: Upload the checked-out Git worktree and queue a hosted Doomer review.
+
+inputs:
+  cli-version:
+    description: Exact doomerlabs/doomer release tag to install.
+    required: false
+    default: 2026.10.17
+  project:
+    description: Doomer project slug or ID with hosted reviews enabled.
+    required: true
+  path:
+    description: Directory in the Git worktree to upload.
+    required: false
+    default: .
+  base:
+    description: Local baseline ref or commit. Defaults to the PR base SHA on pull request events, otherwise the CLI default.
+    required: false
+  auth-mode:
+    description: token uses an isolated temporary login; existing uses the runner's selected CLI profile.
+    required: false
+    default: token
+  token:
+    description: Doomer service-account token with registry:push scope, required by the current snapshot submission API. Supply a CI secret.
+    required: false
+  profile:
+    description: Existing CLI profile for auth-mode existing. Omit to use the selected profile.
+    required: false
+  api-url:
+    description: Doomer API endpoint. Omit to use the CLI or existing profile default.
+    required: false
+  timeout-minutes:
+    description: Maximum minutes for each CLI operation (login and snapshot submission), not completion of the hosted review.
+    required: false
+    default: "10"
+
+outputs:
+  review-id:
+    description: ID of the submitted hosted review.
+    value: ${{ steps.review.outputs.review-id }}
+  status:
+    description: Server status at submission time. A successful step does not mean the review has completed.
+    value: ${{ steps.review.outputs.status }}
+  result-file:
+    description: Path to the CLI submission JSON, not completed review findings.
+    value: ${{ steps.review.outputs.result-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Doomer CLI
+      shell: bash
+      env:
+        INPUT_CLI_VERSION: ${{ inputs.cli-version }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/install.sh"
+    - name: Submit hosted review
+      id: review
+      shell: bash
+      env:
+        INPUT_PROJECT: ${{ inputs.project }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_BASE: ${{ inputs.base }}
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        INPUT_AUTH_MODE: ${{ inputs.auth-mode }}
+        INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_PROFILE: ${{ inputs.profile }}
+        INPUT_API_URL: ${{ inputs.api-url }}
+        INPUT_TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/review.sh"
+
+branding:
+  icon: search
+  color: purple

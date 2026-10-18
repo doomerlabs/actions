@@ -71,7 +71,7 @@ fi
 case "$(uname -s)" in
   Linux) os=linux ;;
   Darwin) os=darwin ;;
-  *) echo "The run action supports Linux and macOS runners." >&2; exit 2 ;;
+  *) echo "The review action supports Linux and macOS runners." >&2; exit 2 ;;
 esac
 
 case "$(uname -m)" in

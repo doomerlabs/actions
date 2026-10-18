@@ -336,7 +336,7 @@ echo "push action tests passed"
 bash "$root/test/install-defaults.sh"
 bash "$root/test/runtime-version.sh"
 bash "$root/test/version.sh"
-bash "$root/test/run.sh"
+bash "$root/test/review.sh"
 bash "$root/test/oidc.sh"
 bash "$root/test/update-major-tag.sh"
 
