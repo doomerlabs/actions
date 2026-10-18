@@ -126,6 +126,10 @@ case "$command" in
   pack) printf '%s\n' '{"schemaVersion":2,"command":"pack","data":{"canonicalReference":"example:1.0.0"}}' ;;
   push)
     reference="$2"
+    if [[ "${MINIMAL_PUSH_OUTPUT:-false}" == true ]]; then
+      printf '{"schemaVersion":1,"command":"push","data":{"canonicalReference":"%s","digest":"sha256:image"}}\n' "$reference"
+      exit 0
+    fi
     printf '{"schemaVersion":1,"command":"push","data":{"canonicalReference":"%s","digest":"sha256:image","manifestDigest":"sha256:manifest","namespaceSignatureDigest":"sha256:namespace-signature","namespaceTrustDigest":"sha256:namespace-trust"}}\n' "$reference"
     ;;
   *) echo "unexpected command: $command" >&2; exit 9 ;;
@@ -312,6 +316,21 @@ if PATH="$fake_bin:$PATH" RUNNER_TEMP="$runner" GITHUB_OUTPUT="$push_output" \
   echo "push accepted token authentication without a token" >&2
   exit 1
 fi
+
+# Current CLI releases return only the canonical reference and OCI digest.
+# Exercise both the versioned and latest pushes without legacy referrer fields.
+minimal_output="$tmp/minimal-output"
+PATH="$fake_bin:$PATH" FAKE_LOG="$tmp/minimal.log" MINIMAL_PUSH_OUTPUT=true \
+  RUNNER_TEMP="$runner" GITHUB_OUTPUT="$minimal_output" \
+  INPUT_LOCAL_REFERENCE=example:1.0.0 INPUT_PROFILE='' INPUT_API_URL=https://api.example \
+  INPUT_AUTH_MODE=existing INPUT_TOKEN='' INPUT_CLIENT_NAME='GitHub Actions' \
+  INPUT_REMOTE_REFERENCE=registry.example/team/example:1.0.0 INPUT_REPOSITORY_NAME='' \
+  INPUT_PUSH_LATEST=true INPUT_REGISTRY_HOST='' INPUT_REGISTRY_NAMESPACE='' \
+  bash "$root/push/scripts/push.sh" >/dev/null
+grep -Fxq 'reference=registry.example/team/example:1.0.0' "$minimal_output"
+grep -Fxq 'digest=sha256:image' "$minimal_output"
+grep -Fxq 'manifest-digest=' "$minimal_output"
+grep -Fxq 'latest-reference=registry.example/team/example:latest' "$minimal_output"
 
 echo "push action tests passed"
 bash "$root/test/install-defaults.sh"

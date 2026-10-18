@@ -160,7 +160,7 @@ For hosted pushes, `repository-name` overrides the remote name independently of 
 | --- | --- |
 | `reference` | Canonical pushed registry reference. |
 | `digest` | Pushed OCI image manifest digest. |
-| `manifest-digest` | Pushed adversary-manifest referrer digest. |
+| `manifest-digest` | Optional adversary-manifest referrer digest; empty when the CLI does not report it. |
 | `local-reference` | Canonical reference produced by the package step. |
 | `latest-reference` | Pushed `latest` reference when `push-latest` is enabled. |
 | `namespace-signature-digest` | Platform-issued namespace signature referrer digest for a hosted private publish; empty for external or public repositories. |
